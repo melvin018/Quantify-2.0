@@ -1,0 +1,52 @@
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8000:8000"
+    env_file:
+      - ../.env
+    environment:
+      # docker-compose always starts the mysql service below, so point the
+      # backend at it explicitly. Without this, the backend would silently
+      # default to SQLite even though a MySQL container is running right
+      # next to it -- which defeats the point of including MySQL here.
+      # Comment this out (and remove the mysql service + depends_on) if you
+      # want the simpler SQLite-only setup instead.
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_USER: ${MYSQL_USER:-quantify_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-quantify_pass}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-quantify}
+    depends_on:
+      - mysql
+    restart: unless-stopped
+
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpass}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-quantify}
+      MYSQL_USER: ${MYSQL_USER:-quantify_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-quantify_pass}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    restart: unless-stopped
+
+  frontend:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ../frontend:/usr/share/nginx/html:ro
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  mysql_data:

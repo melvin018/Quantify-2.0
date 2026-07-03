@@ -1,0 +1,20 @@
+fastapi>=0.110
+uvicorn[standard]>=0.29
+python-dotenv>=1.0
+requests>=2.31
+pydantic>=2.6
+
+# Optional, only needed if MYSQL_HOST is set in .env (otherwise SQLite is used).
+# NOTE: the docker-compose setup in docker/docker-compose.yml DOES set
+# MYSQL_HOST, so this is required when running via Docker. Uncomment it
+# (or just use docker/requirements-docker.txt, which already includes it)
+# before building the image if you're using the MySQL container.
+# mysql-connector-python>=8.3
+
+# Optional, only needed if LLM_BACKEND=flant5 in .env (otherwise Claude API is used)
+# transformers>=4.40
+# torch>=2.2
+
+# Dev/test dependencies
+pytest>=8.0
+httpx>=0.27

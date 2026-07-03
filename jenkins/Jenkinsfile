@@ -1,0 +1,72 @@
+// Jenkinsfile -- CI/CD pipeline for Quantify
+// Builds the backend image, runs tests, and (on main) deploys via docker-compose.
+
+pipeline {
+    agent any
+
+    environment {
+        IMAGE_NAME = "quantify-backend"
+        IMAGE_TAG  = "${env.BUILD_NUMBER}"
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                sh '''
+                    python3 -m venv venv
+                    . venv/bin/activate
+                    pip install -r backend/requirements.txt
+                    pip install pytest
+                '''
+            }
+        }
+
+        stage('Run Tests') {
+            steps {
+                sh '''
+                    . venv/bin/activate
+                    cd backend
+                    pytest ../tests -v
+                '''
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh "docker build -f docker/Dockerfile -t ${IMAGE_NAME}:${IMAGE_TAG} ."
+                sh "docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest"
+            }
+        }
+
+        stage('Deploy') {
+            when {
+                branch 'main'
+            }
+            steps {
+                sh '''
+                    cd docker
+                    docker-compose down
+                    docker-compose up -d --build
+                '''
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Build ${IMAGE_TAG} succeeded."
+        }
+        failure {
+            echo "Build ${IMAGE_TAG} failed -- check test/build logs above."
+        }
+        always {
+            sh 'docker system prune -f || true'
+        }
+    }
+}
